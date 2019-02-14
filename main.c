@@ -141,34 +141,38 @@ void *ioWorkerRoutine(void *param)
                 bundle->clientSize = i;
             }
 
-            for (i = 0; i <= bundle->clientSize; i++)
+            if (--num <- 0)
             {
-                if ((sock = bundle->clients[i]) < 0)
-                {
-                    continue;
-                }
+                continue;
+            }
+        }
 
-                if (FD_ISSET(sock, &readSet))
-                {
-                    fprintf(stdout, "data detected\n");
-                    if (uwuReadAllFromSocket(sock, buffer, BUFFER_LEN) > 0)
-                    {
-                        fprintf(stdout, "read [%s] from %s\n", buffer, inet_ntoa(bundle->addresses[i].sin_addr));
-                        write(sock, buffer, BUFFER_LEN);
-                    }
-                    else
-                    {
-                        fprintf(stdout, "connection closed by remote host %s\n", inet_ntoa(bundle->addresses[i].sin_addr));
-                        close(sock);
-                        FD_CLR(sock, &bundle->set);
-                        bundle->clients[i] = -1;
-                    }
-                }
+        for (i = 0; i <= bundle->clientSize; i++)
+        {
+            if ((sock = bundle->clients[i]) < 0)
+            {
+                continue;
+            }
 
-                if (--num <= 0)
+            if (FD_ISSET(sock, &readSet))
+            {
+                if (uwuReadAllFromSocket(sock, buffer, BUFFER_LEN) > 0)
                 {
-                    break;
+                    fprintf(stdout, "read [%s] from %s\n", buffer, inet_ntoa(bundle->addresses[i].sin_addr));
+                    write(sock, buffer, BUFFER_LEN);
                 }
+                else
+                {
+                    fprintf(stdout, "connection closed by remote host %s\n", inet_ntoa(bundle->addresses[i].sin_addr));
+                    close(sock);
+                    FD_CLR(sock, &bundle->set);
+                    bundle->clients[i] = -1;
+                }
+            }
+
+            if (--num <= 0)
+            {
+                break;
             }
         }
     }
