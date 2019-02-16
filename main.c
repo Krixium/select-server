@@ -77,6 +77,7 @@ int main(int argc, char *argv[])
 void printHelp(const char *name)
 {
     fprintf(stdout, "Usage: %s port size\n", name);
+    fprintf(stdout, "Arguements:\n");
     fprintf(stdout, "\tport - The port to listen on.\n");
     fprintf(stdout, "\tsize - The size of the packet.\n");
 }
@@ -85,7 +86,7 @@ void *ioWorkerRoutine(void *param)
 {
     struct select_bundle *bundle = (struct select_bundle *)param;
 
-    volatile int i;
+    int i;
     int num;
     fd_set readSet;
 
