@@ -7,5 +7,6 @@
 #include "server.h"
 
 void printHelp(const char* name);
+void catchSig(int sig);
 
 #endif // MAIN_H

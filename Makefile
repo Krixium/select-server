@@ -17,4 +17,4 @@ server.o:
 	$(CC) $(CFLAGS) -O -c server.c
 
 clean:
-	rm -f *.o *.txt *.bak $(NAME) $(DEBUGNAME)
+	rm -f *.o *.txt *.bak *.log $(NAME) $(DEBUGNAME)

@@ -1,5 +1,6 @@
 #include "main.h"
 
+#include <signal.h>
 #include <sys/sysinfo.h>
 
 // initializing library
@@ -8,13 +9,19 @@
 #include "uwuLib/uwuLib.h"
 #include "uwuLib/uwuLibNet.h"
 
+unsigned int numProcs;
+pthread_t *workers;
+
 int main(int argc, char *argv[])
 {
-    unsigned int numProcs = get_nprocs();
-    pthread_t *workers;
     struct worker_args args;
 
     short port;
+
+    numProcs = get_nprocs();
+
+    // connect signal handler
+    signal(SIGINT, catchSig);
 
     // get command line arguements
     if (argc != 3)
@@ -28,11 +35,16 @@ int main(int argc, char *argv[])
     // create listening socket
     if (!uwuCreateBoundSocket(&args.listenSocket, port))
     {
-        perror("could not bind socket");
+        perror("Could not bind socket");
         return 1;
     }
 
-    // initialize network variables
+    // set worker arguements
+    if ((args.logFile = uwuOpenFile("select-server.log", "w+")) == NULL)
+    {
+        perror("Could not create log file");
+        return 1;
+    }
     bzero(&args.bundle.addresses, sizeof(struct sockaddr_in) * FD_SETSIZE);
     args.bundle.maxfd = args.listenSocket;
     args.bundle.clientSize = -1;
@@ -50,11 +62,12 @@ int main(int argc, char *argv[])
 
     // allocate workers
     workers = calloc(sizeof(pthread_t), numProcs);
+
     for (int i = 0; i < numProcs; i++)
     {
         if (uwuCreateThread(&workers[i], ioWorkerRoutine, (void *)&args))
         {
-            perror("could not create worker thread");
+            perror("Could not create worker thread");
             return 1;
         }
     }
@@ -62,8 +75,15 @@ int main(int argc, char *argv[])
     {
         uwuJoinThread(workers[i]);
     }
+
     // free workers
     free(workers);
+    fprintf(stdout, "Removing workers\n");
+    
+    // close log file
+    fflush(args.logFile);
+    fclose(args.logFile);
+    fprintf(stdout, "Closing log file\n");
 
     return 0;
 }
@@ -76,3 +96,11 @@ void printHelp(const char *name)
     fprintf(stdout, "\tsize - The size of the packet.\n");
 }
 
+void catchSig(int sig)
+{
+    fprintf(stdout, "Stopping server\n");
+    for (int i = 0; i < numProcs; i++)
+    {
+        pthread_cancel(workers[i]);
+    }
+}

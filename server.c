@@ -1,5 +1,7 @@
 #include "server.h"
 
+pthread_mutex_t lock;
+
 void *ioWorkerRoutine(void *param)
 {
     struct worker_args *args = (struct worker_args *)param;
@@ -29,7 +31,7 @@ void *ioWorkerRoutine(void *param)
         }
 
         // read all incoming data and handle it
-        handleIncomingData(bundle, &readSet, numSelected, buffer, args->bufferLength);
+        handleIncomingData(args, &readSet, numSelected, buffer);
     }
 
     free(buffer);
@@ -80,34 +82,48 @@ void handleNewConnection(struct net_bundle *bundle, fd_set *set, const int liste
     }
 }
 
-void handleIncomingData(struct net_bundle *bundle, fd_set *set, int numSelected, char *buffer, const unsigned int bufferLength)
+void handleIncomingData(struct worker_args *args, fd_set *set, int numSelected, char *buffer)
 {
     int sock = -1;
     unsigned int dataRead = -1;
 
-    for (int i = 0; i <= bundle->clientSize; i++)
+    for (int i = 0; i <= args->bundle.clientSize; i++)
     {
-        if ((sock = bundle->clients[i]) < 0)
+        if ((sock = args->bundle.clients[i]) < 0)
         {
             continue;
         }
 
         if (FD_ISSET(sock, set))
         {
-            dataRead = uwuReadAllFromSocket(sock, buffer, bufferLength);
+            dataRead = uwuReadAllFromSocket(sock, buffer, args->bufferLength);
             if (dataRead > 0)
             {
-                write(sock, buffer, bufferLength);
-                fprintf(stdout, "read [%s] from %s\n", buffer, inet_ntoa(bundle->addresses[i].sin_addr));
-                bundle->dataSent[i] += dataRead;
-                bundle->requests[i]++;
+                write(sock, buffer, args->bufferLength);
+                fprintf(stdout, "read [%s] from %s\n", buffer, inet_ntoa(args->bundle.addresses[i].sin_addr));
+                args->bundle.requests[i]++;
+                args->bundle.dataSent[i] += dataRead;
             }
             else
             {
-                fprintf(stdout, "connection closed by remote host %s\n", inet_ntoa(bundle->addresses[i].sin_addr));
+                pthread_mutex_lock(&lock);
+                if (FD_ISSET(sock, &args->bundle.set))
+                {
+                    FD_CLR(sock, &args->bundle.set);
+                }
+                else
+                {
+                    pthread_mutex_unlock(&lock);
+                    continue;
+                }
+                pthread_mutex_unlock(&lock);
+
+                fprintf(stdout, "connection closed by remote host %s\n", inet_ntoa(args->bundle.addresses[i].sin_addr));
+                fprintf(args->logFile, "%s,%d,%ld\n", inet_ntoa(args->bundle.addresses[i].sin_addr), args->bundle.requests[i], args->bundle.dataSent[i]);
                 close(sock);
-                FD_CLR(sock, &bundle->set);
-                bundle->clients[i] = -1;
+                args->bundle.clients[i] = -1;
+                args->bundle.requests[i] = 0;
+                args->bundle.dataSent[i] = 0;
             }
         }
 

@@ -23,7 +23,7 @@ struct net_bundle
     struct sockaddr_in addresses[FD_SETSIZE];
     fd_set set;
     // tracking
-    unsigned long requests[FD_SETSIZE];
+    unsigned int requests[FD_SETSIZE];
     unsigned long dataSent[FD_SETSIZE];
 };
 
@@ -37,6 +37,6 @@ struct worker_args {
 void *ioWorkerRoutine(void *param);
 
 void handleNewConnection(struct net_bundle *bundle, fd_set *set, const int listenSocket);
-void handleIncomingData(struct net_bundle *bundle, fd_set *set, int numSelected, char *buffer, const unsigned int bufferLength);
+void handleIncomingData(struct worker_args *args, fd_set *set, int numSelected, char *buffer);
 
 #endif // SERVER_H
