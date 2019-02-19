@@ -23,8 +23,8 @@ struct net_bundle
     struct sockaddr_in addresses[FD_SETSIZE];
     fd_set set;
     // tracking
-    unsigned int requests[FD_SETSIZE];
-    unsigned long dataSent[FD_SETSIZE];
+    int requests[FD_SETSIZE];
+    int dataSent[FD_SETSIZE];
 };
 
 struct worker_args {

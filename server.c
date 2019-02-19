@@ -109,16 +109,14 @@ void handleIncomingData(struct worker_args *args, fd_set *set, int numSelected, 
                 if (FD_ISSET(sock, &args->bundle.set))
                 {
                     FD_CLR(sock, &args->bundle.set);
-                fprintf(stdout, "connection closed by remote host %s\n", inet_ntoa(args->bundle.addresses[i].sin_addr));
-                fprintf(args->logFile, "%s,%d,%ld\n", inet_ntoa(args->bundle.addresses[i].sin_addr), args->bundle.requests[i], args->bundle.dataSent[i]);
-                close(sock);
-                args->bundle.clients[i] = -1;
-                args->bundle.requests[i] = 0;
-                args->bundle.dataSent[i] = 0;
-
+                    fprintf(stdout, "connection closed by remote host %s\n", inet_ntoa(args->bundle.addresses[i].sin_addr));
+                    fprintf(args->logFile, "%s,%d,%ld\n", inet_ntoa(args->bundle.addresses[i].sin_addr), args->bundle.requests[i], args->bundle.dataSent[i]);
+                    close(sock);
+                    args->bundle.clients[i] = -1;
+                    args->bundle.requests[i] = 0;
+                    args->bundle.dataSent[i] = 0;
                 }
                 pthread_mutex_unlock(&lock);
-
             }
         }
 
