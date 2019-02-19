@@ -18,6 +18,7 @@ void *ioWorkerRoutine(void *param)
     {
         readSet = bundle->set;
         numSelected = select(bundle->maxfd + 1, &readSet, NULL, NULL, NULL);
+        printf("selected returned with %d\n", numSelected);
 
         // new connection
         if (FD_ISSET(args->listenSocket, &readSet))
@@ -45,14 +46,11 @@ void handleNewConnection(struct net_bundle *bundle, fd_set *set, const int liste
     int newSocket = -1;
     struct sockaddr_in newClient;
 
-    pthread_mutex_lock(&lock);
     if (!uwuAcceptSocket(listenSocket, &newSocket, &newClient))
     {
-        pthread_mutex_unlock(&lock);
         perror("could not accept new client");
         exit(1);
     }
-    pthread_mutex_unlock(&lock);
 
     fprintf(stdout, "new client accepted, remote address: %s\n", inet_ntoa(newClient.sin_addr));
 
@@ -113,20 +111,14 @@ void handleIncomingData(struct worker_args *args, fd_set *set, int numSelected, 
                 if (FD_ISSET(sock, &args->bundle.set))
                 {
                     FD_CLR(sock, &args->bundle.set);
-                }
-                else
-                {
-                    pthread_mutex_unlock(&lock);
-                    continue;
+                    fprintf(stdout, "connection closed by remote host %s\n", inet_ntoa(args->bundle.addresses[i].sin_addr));
+                    fprintf(args->logFile, "%s,%d,%ld\n", inet_ntoa(args->bundle.addresses[i].sin_addr), args->bundle.requests[i], args->bundle.dataSent[i]);
+                    close(sock);
+                    args->bundle.clients[i] = -1;
+                    args->bundle.requests[i] = 0;
+                    args->bundle.dataSent[i] = 0;
                 }
                 pthread_mutex_unlock(&lock);
-
-                fprintf(stdout, "connection closed by remote host %s\n", inet_ntoa(args->bundle.addresses[i].sin_addr));
-                fprintf(args->logFile, "%s,%d,%ld\n", inet_ntoa(args->bundle.addresses[i].sin_addr), args->bundle.requests[i], args->bundle.dataSent[i]);
-                close(sock);
-                args->bundle.clients[i] = -1;
-                args->bundle.requests[i] = 0;
-                args->bundle.dataSent[i] = 0;
             }
         }
 
