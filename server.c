@@ -45,11 +45,14 @@ void handleNewConnection(struct net_bundle *bundle, fd_set *set, const int liste
     int newSocket = -1;
     struct sockaddr_in newClient;
 
+    pthread_mutex_lock(&lock);
     if (!uwuAcceptSocket(listenSocket, &newSocket, &newClient))
     {
+        pthread_mutex_unlock(&lock);
         perror("could not accept new client");
         exit(1);
     }
+    pthread_mutex_unlock(&lock);
 
     fprintf(stdout, "new client accepted, remote address: %s\n", inet_ntoa(newClient.sin_addr));
 
